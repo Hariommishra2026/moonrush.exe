@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport"
+content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+
+<title>Moon Voyager</title>
+
+<style>
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Segoe UI,sans-serif;
+}
+
+body{
+overflow:hidden;
+background:black;
+touch-action:none;
+}
+
+#menu{
+position:absolute;
+inset:0;
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+background:radial-gradient(circle,#182848,#000);
+color:white;
+z-index:10;
+}
+
+#menu h1{
+font-size:50px;
+color:#7df9ff;
+text-shadow:0 0 20px cyan;
+margin-bottom:20px;
+}
+
+#playBtn{
+padding:15px 35px;
+font-size:22px;
+border:none;
+border-radius:10px;
+background:#7df9ff;
+cursor:pointer;
+font-weight:bold;
+}
+
+canvas{
+display:block;
+}
+
+#hud{
+position:absolute;
+top:10px;
+left:10px;
+color:white;
+font-size:22px;
+font-weight:bold;
+text-shadow:0 0 10px black;
+display:none;
+}
+
+#gameOver{
+position:absolute;
+inset:0;
+background:rgba(0,0,0,.9);
+display:none;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+color:white;
+}
+
+#gameOver h1{
+font-size:55px;
+margin-bottom:20px;
+}
+
+#gameOver button{
+padding:14px 35px;
+font-size:20px;
+border:none;
+border-radius:10px;
+cursor:pointer;
+background:cyan;
+}
+
+#watermark{
+position:absolute;
+bottom:10px;
+right:10px;
+color:white;
+font-size:13px;
+opacity:.8;
+}
+</style>
+</head>
+
+<body>
+
+<div id="menu">
+<h1>🌙 MOON VOYAGER</h1>
+<button id="playBtn">PLAY</button>
+<p style="margin-top:15px">
+Touch & Hold to Fly
+</p>
+</div>
+
+<div id="hud">
+❤️ <span id="health">100</span>
+&nbsp;&nbsp;
+⭐ <span id="score">0</span>
+</div>
+
+<div id="gameOver">
+<h1>MISSION FAILED</h1>
+<h2 id="finalScore"></h2>
+<br>
+<button onclick="location.reload()">
+Play Again
+</button>
+</div>
+
+<div id="watermark">
+Created by tech.hariom7
+</div>
+
+<canvas id="game"></canvas>
+
+<script>
+
+const canvas =
+document.getElementById("game");
+
+const ctx =
+canvas.getContext("2d");
+
+canvas.width =
+window.innerWidth;
+
+canvas.height =
+window.innerHeight;
+
+let running=false;
+let flying=false;
+
+const moon={
+x:120,
+y:canvas.height/2,
+r:30,
+vy:0
+};
+
+let score=0;
+let health=100;
+
+const stars=[];
+const asteroids=[];
+const collectibles=[];
+
+for(let i=0;i<120;i++){
+
+stars.push({
+x:Math.random()*canvas.width,
+y:Math.random()*canvas.height,
+s:Math.random()*3
+});
+
+}
+
+document
+.getElementById("playBtn")
+.onclick=()=>{
+document.getElementById(
+"menu"
+).style.display="none";
+
+document.getElementById(
+"hud"
+).style.display="block";
+
+running=true;
+
+spawnObjects();
+
+gameLoop();
+};
+
+function spawnObjects(){
+
+setInterval(()=>{
+
+if(!running)return;
+
+asteroids.push({
+
+x:canvas.width+100,
+
+y:Math.random()
+*(canvas.height-100),
+
+r:25+Math.random()*20
+
+});
+
+},1300);
+
+setInterval(()=>{
+
+if(!running)return;
+
+collectibles.push({
+
+x:canvas.width+50,
+
+y:Math.random()
+*(canvas.height-100),
+
+r:12
+
+});
+
+},900);
+}
+
+function drawMoon(){
+
+ctx.save();
+
+ctx.shadowBlur=25;
+ctx.shadowColor="#fff";
+
+ctx.beginPath();
+
+ctx.fillStyle="white";
+
+ctx.arc(
+moon.x,
+moon.y,
+moon.r,
+0,
+Math.PI*2
+);
+
+ctx.fill();
+
+ctx.fillStyle="#ccc";
+
+ctx.beginPath();
+
+ctx.arc(
+moon.x+10,
+moon.y-8,
+10,
+0,
+Math.PI*2
+);
+
+ctx.fill();
+
+ctx.restore();
+}
+
+function collision(ax,ay,ar,bx,by,br){
+
+let dx=ax-bx;
+let dy=ay-by;
+
+return Math.sqrt(
+dx*dx + dy*dy
+)<ar+br;
+
+}
+
+function gameLoop(){
+
+if(!running)return;
+
+requestAnimationFrame(
+gameLoop
+);
+
+ctx.fillStyle="#000814";
+ctx.fillRect(
+0,
+0,
+canvas.width,
+canvas.height
+);
+
+stars.forEach(s=>{
+
+s.x-=2;
+
+if(s.x<0){
+s.x=canvas.width;
+s.y=Math.random()*canvas.height;
+}
+
+ctx.fillStyle="white";
+
+ctx.fillRect(
+s.x,
+s.y,
+s.s,
+s.s
+);
+
+});
+
+if(flying){
+
+moon.vy-=0.8;
+
+}else{
+
+moon.vy+=0.45;
+
+}
+
+moon.vy*=0.96;
+moon.y+=moon.vy;
+
+if(moon.y<0)
+moon.y=0;
+
+if(moon.y>
+canvas.height){
+
+gameEnd();
+
+}
+
+drawMoon();
+
+for(let i=
+asteroids.length-1;
+i>=0;
+i--){
+
+let a=asteroids[i];
+
+a.x-=7;
+
+ctx.fillStyle=
+"#666";
+
+ctx.beginPath();
+
+ctx.arc(
+a.x,
+a.y,
+a.r,
+0,
+Math.PI*2
+);
+
+ctx.fill();
+
+if(collision(
+moon.x,
+moon.y,
+moon.r,
+a.x,
+a.y,
+a.r
+)){
+
+health-=15;
+
+document
+.getElementById(
+"health"
+).innerText=health;
+
+asteroids.splice(i,1);
+
+if(health<=0){
+
+gameEnd();
+
+}
+
+}
+
+if(a.x<-100){
+
+asteroids.splice(i,1);
+
+}
+
+}
+
+for(let i=
+collectibles.length-1;
+i>=0;
+i--){
+
+let c=
+collectibles[i];
+
+c.x-=7;
+
+ctx.save();
+
+ctx.shadowBlur=20;
+ctx.shadowColor="yellow";
+
+ctx.fillStyle=
+"gold";
+
+ctx.beginPath();
+
+ctx.arc(
+c.x,
+c.y,
+c.r,
+0,
+Math.PI*2
+);
+
+ctx.fill();
+
+ctx.restore();
+
+if(collision(
+moon.x,
+moon.y,
+moon.r,
+c.x,
+c.y,
+c.r
+)){
+
+score+=10;
+
+document
+.getElementById(
+"score"
+).innerText=score;
+
+collectibles.splice(i,1);
+
+}
+
+if(c.x<-50){
+
+collectibles.splice(i,1);
+
+}
+
+}
+
+}
+
+function gameEnd(){
+
+running=false;
+
+document
+.getElementById(
+"gameOver"
+).style.display="flex";
+
+document
+.getElementById(
+"finalScore"
+).innerText=
+"Final Score : "+score;
+
+}
+
+function startFly(){
+
+flying=true;
+
+}
+
+function stopFly(){
+
+flying=false;
+
+}
+
+canvas.addEventListener(
+"touchstart",
+e=>{
+e.preventDefault();
+startFly();
+}
+);
+
+canvas.addEventListener(
+"touchend",
+e=>{
+e.preventDefault();
+stopFly();
+}
+);
+
+document.addEventListener(
+"keydown",
+e=>{
+if(e.code==="Space")
+startFly();
+}
+);
+
+document.addEventListener(
+"keyup",
+e=>{
+if(e.code==="Space")
+stopFly();
+}
+);
+
+</script>
+
+</body>
+</html>
